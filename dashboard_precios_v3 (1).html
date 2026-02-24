@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Análisis de Precios — Siegfried</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red: #c0392b;
+  --red-light: #e74c3c;
+  --red-pale: #fdf0ef;
+  --red-border: #f5c6c2;
+  --dark: #1a1a1a;
+  --mid: #4a4a4a;
+  --muted: #888;
+  --border: #e0e0e0;
+  --bg: #ffffff;
+  --white: #ffffff;
+  --green: #1a7a4a;
+  --green-bg: #edf7f2;
+  --orange: #c67c0a;
+  --orange-bg: #fef7e8;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--dark); font-family: var(--sans); font-size: 14px; min-height: 100vh; }
+
+/* NAV */
+.nav {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 48px;
+  position: sticky; top: 0; z-index: 200;
+}
+.nav-brand {
+  font-family: var(--mono);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--red);
+  margin-right: 32px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.nav-brand span { color: var(--dark); }
+.nav-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
+.nav-tab {
+  padding: 0 16px;
+  height: 48px;
+  display: flex; align-items: center;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all .15s;
+  font-family: var(--mono);
+}
+.nav-tab:hover { color: var(--dark); }
+.nav-tab.active { color: var(--red); border-bottom-color: var(--red); }
+.nav-right { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+
+/* HEADER */
+.page-header {
+  padding: 24px 40px 0;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+}
+.page-eyebrow {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--red);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  display: flex; align-items: center; gap: 8px;
+}
+.page-eyebrow::before { content: '—— '; }
+.page-sub { font-size: 12px; color: var(--muted); margin-bottom: 20px; font-family: var(--mono); }
+
+/* FILTER BAR */
+.filter-bar {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 0 40px 20px;
+  background: var(--white);
+}
+.filter-group { display: flex; flex-direction: column; gap: 5px; }
+.filter-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.filter-select {
+  background: var(--white);
+  border: 1px solid var(--border);
+  color: var(--dark);
+  padding: 7px 28px 7px 10px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23888'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  min-width: 200px;
+  transition: border-color .15s;
+}
+.filter-select:focus { border-color: var(--red); }
+
+.btn-period-group { display: flex; gap: 2px; }
+.btn-period {
+  padding: 7px 13px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .15s;
+  letter-spacing: .5px;
+}
+.btn-period:first-child { border-radius: 4px 0 0 4px; }
+.btn-period:last-child { border-radius: 0 4px 4px 0; }
+.btn-period.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+  font-weight: 500;
+}
+
+/* KPI CARDS */
+.kpi-row {
+  display: flex;
+  gap: 12px;
+  padding: 20px 40px;
+  flex-wrap: wrap;
+}
+.kpi {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--border);
+  padding: 16px 20px;
+  min-width: 160px;
+  flex: 1;
+  border-radius: 2px;
+}
+.kpi.red { border-top-color: var(--red); }
+.kpi.green { border-top-color: #27ae60; }
+.kpi.orange { border-top-color: #e67e22; }
+.kpi.purple { border-top-color: #8e44ad; }
+.kpi.blue { border-top-color: #2980b9; }
+.kpi-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.kpi-val {
+  font-family: var(--mono);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--dark);
+}
+.kpi-val.red { color: var(--red); }
+.kpi-val.green { color: #27ae60; }
+.kpi-val.orange { color: #e67e22; }
+.kpi-sub { font-size: 11px; color: var(--muted); margin-top: 5px; font-family: var(--mono); }
+
+/* SECTION */
+.section { padding: 0 40px 32px; }
+.section-title {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 16px;
+}
+.section-num {
+  background: var(--red);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 2px;
+}
+.section-title h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--dark);
+}
+
+/* CHARTS ROW */
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 880px) {
+  .charts-grid { grid-template-columns: 1fr; }
+  .kpi-row, .section, .filter-bar, .page-header { padding-left: 20px; padding-right: 20px; }
+  .nav { padding: 0 20px; }
+}
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 20px;
+}
+.card-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.card-title {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: var(--red);
+  display: flex; align-items: center; gap: 6px;
+}
+.card-title::before { content: '·'; color: var(--red); font-size: 16px; line-height: 0; }
+.card-subtitle { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+/* TABLE */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead tr { border-bottom: 2px solid var(--border); }
+th {
+  padding: 9px 10px;
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+th:hover { color: var(--dark); }
+th.sorted { color: var(--red); }
+th.num, td.num { text-align: right; }
+tbody tr { border-bottom: 1px solid #f0f0f0; transition: background .1s; }
+tbody tr:hover { background: #f5f5f5; }
+tbody tr.sieg-row { background: #fff6f5; }
+tbody tr.sieg-row:hover { background: #ffeeed; }
+td {
+  padding: 9px 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+td.lab-cell { font-family: var(--sans); font-weight: 600; font-size: 13px; }
+td.prod-cell { font-family: var(--sans); font-size: 12px; }
+td.pres-cell { font-family: var(--mono); font-size: 10px; color: var(--muted); max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+
+.sieg-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--red-pale);
+  color: var(--red);
+  border: 1px solid var(--red-border);
+  border-radius: 2px;
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  font-family: var(--mono);
+}
+.dose-badge {
+  background: #f0f0f0;
+  color: var(--mid);
+  border-radius: 2px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-family: var(--mono);
+}
+
+.var-up { color: var(--red-light); }
+.var-zero { color: var(--green); }
+.var-low { color: var(--orange); }
+.vs-cheap { color: var(--green); font-weight: 600; }
+.vs-exp { color: var(--red); font-weight: 600; }
+.vs-neu { color: var(--orange); font-weight: 600; }
+.vs-na { color: #ccc; }
+.sieg-ref { color: var(--red); font-weight: 700; font-size: 10px; letter-spacing: 1px; }
+
+/* PPU / PVP bar */
+.price-cell { display: flex; flex-direction: column; gap: 2px; align-items: flex-end; }
+.price-main { font-weight: 600; }
+.price-pvp { font-size: 10px; color: var(--muted); }
+.mini-bar { height: 2px; border-radius: 1px; background: var(--red-border); margin-top: 2px; }
+.mini-bar.sieg { background: var(--red); }
+
+/* ROW COUNT */
+.row-count-badge {
+  background: #f0f0f0;
+  border-radius: 2px;
+  padding: 2px 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* PERIOD INDICATOR */
+.period-chip {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .12s;
+}
+.period-chip.active { background: var(--red); border-color: var(--red); color: #fff; }
+
+/* LEGEND */
+.legend-row {
+  display: flex; gap: 16px; flex-wrap: wrap;
+  font-family: var(--mono); font-size: 10px; color: var(--muted);
+  margin-bottom: 10px;
+}
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-swatch { width: 10px; height: 10px; border-radius: 1px; }
+
+/* VIEW TOGGLE */
+.view-group { display: flex; gap: 2px; }
+.view-btn {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  cursor: pointer;
+  transition: all .12s;
+  letter-spacing: .5px;
+}
+.view-btn:first-child { border-radius: 3px 0 0 3px; }
+.view-btn:last-child { border-radius: 0 3px 3px 0; }
+.view-btn.active { background: var(--dark); border-color: var(--dark); color: #fff; }
+
+.filter-row-extra {
+  display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;
+  padding: 0 40px 16px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+}
+
+/* CHART canvas height */
+.chart-wrap { position: relative; height: 260px; }
+
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-brand">SIEGFRIED <span>· PRECIOS</span></div>
+  <div class="nav-sep"></div>
+  <div class="nav-tab active" data-tab="comparativa" onclick="switchTab('comparativa')">Comparativa</div>
+  <div class="nav-tab" data-tab="siegfried" onclick="switchTab('siegfried')">Siegfried</div>
+  <div class="nav-right">KAIROS / ANMAT &nbsp;·&nbsp; 31/12/2025 – 24/02/2026</div>
+</nav>
+
+
+<!-- COMPARATIVE TABLE SECTION -->
+<div id="tab-comparativa" class="tab-section">
+  <div class="page-header">
+    <div class="page-eyebrow">Tabla Comparativa · Por Categoría</div>
+    <div class="page-sub">Agrupada por dosis + cantidad de comprimidos · Siegfried destacado como referencia</div>
+    <div class="filter-bar">
+      <div class="filter-group">
+        <div class="filter-label">Droga</div>
+        <select class="filter-select" id="cDrug">
+          <option value="all">Todas las drogas</option>
+          <option value="sildenafil">Sildenafil</option>
+          <option value="tadalafilo">Tadalafilo</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Período</div>
+        <div class="btn-period-group">
+          <button class="btn-period active" data-cp="feb">Feb 2026</button>
+          <button class="btn-period" data-cp="dic">Dic 2025</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Precio</div>
+        <div class="view-group">
+          <button class="view-btn active" data-cm="ppu">PPU</button>
+          <button class="view-btn" data-cm="pvp">PVP</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="section" style="padding-top:24px" id="compTableWrap"></div>
+</div>
+
+<!-- SIEGFRIED SECTION -->
+<div id="tab-siegfried" class="tab-section" style="display:none">
+  <div class="page-header">
+    <div class="page-eyebrow">Portfolio Siegfried</div>
+    <div class="page-sub">Precios y posición competitiva por categoría</div>
+    <div class="filter-bar">
+      <div class="filter-group">
+        <div class="filter-label">Droga</div>
+        <select class="filter-select" id="sDrug">
+          <option value="all">Todas las drogas</option>
+          <option value="sildenafil">Sildenafil</option>
+          <option value="tadalafilo">Tadalafilo</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <div class="filter-label">Período</div>
+        <div class="btn-period-group">
+          <button class="btn-period active" data-sp="feb">Feb 2026</button>
+          <button class="btn-period" data-sp="dic">Dic 2025</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="section" style="padding-top:24px">
+    <div class="card" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Presentación</th>
+              <th>Dosis</th>
+              <th class="num">Comp.</th>
+              <th class="num">PVP</th>
+              <th class="num">PPU</th>
+              <th class="num">Var %</th>
+              <th class="num">Pos. en cat.</th>
+              <th class="num">Más baratos</th>
+              <th class="num">Más caros</th>
+            </tr>
+          </thead>
+          <tbody id="siegTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = [{"producto":"VIMAX","presentacion":"25 mg comp.x 2","droga":"sildenafil","laboratorio":"Roemmers","mg":"25 mg","qty":2,"pvp_dic":4041,"pvp_feb":4274,"var_pct":5.77,"ppu_dic":2020.5,"ppu_feb":2137.0,"is_siegfried":false},{"producto":"VIMAX","presentacion":"50 mg comp.x 2","droga":"sildenafil","laboratorio":"Roemmers","mg":"50 mg","qty":2,"pvp_dic":5396,"pvp_feb":5708,"var_pct":5.78,"ppu_dic":2698.0,"ppu_feb":2854.0,"is_siegfried":false},{"producto":"VIMAX","presentacion":"100 mg comp.x 2","droga":"sildenafil","laboratorio":"Roemmers","mg":"100 mg","qty":2,"pvp_dic":5882,"pvp_feb":6191,"var_pct":5.25,"ppu_dic":2941.0,"ppu_feb":3095.5,"is_siegfried":false},{"producto":"BIFORT","presentacion":"25 mg comp.rec.x 2","droga":"sildenafil","laboratorio":"Finadiet","mg":"25 mg","qty":2,"pvp_dic":3894.64,"pvp_feb":3999.79,"var_pct":2.7,"ppu_dic":1947.32,"ppu_feb":1999.89,"is_siegfried":false},{"producto":"BIFORT","presentacion":"50 mg comp.rec.x 2","droga":"sildenafil","laboratorio":"Finadiet","mg":"50 mg","qty":2,"pvp_dic":5085.39,"pvp_feb":5222.7,"var_pct":2.7,"ppu_dic":2542.7,"ppu_feb":2611.35,"is_siegfried":false},{"producto":"BIFORT","presentacion":"50 mg comp.rec.x 4","droga":"sildenafil","laboratorio":"Finadiet","mg":"50 mg","qty":4,"pvp_dic":9826.77,"pvp_feb":10092.09,"var_pct":2.7,"ppu_dic":2456.69,"ppu_feb":2523.02,"is_siegfried":false},{"producto":"BIFORT","presentacion":"50 mg comp.rec.x 10","droga":"sildenafil","laboratorio":"Finadiet","mg":"50 mg","qty":10,"pvp_dic":24343.55,"pvp_feb":25000.83,"var_pct":2.7,"ppu_dic":2434.36,"ppu_feb":2500.08,"is_siegfried":false},{"producto":"BIFORT","presentacion":"100 mg comp.rec.x 2","droga":"sildenafil","laboratorio":"Finadiet","mg":"100 mg","qty":2,"pvp_dic":6506.56,"pvp_feb":6682.23,"var_pct":2.7,"ppu_dic":3253.28,"ppu_feb":3341.12,"is_siegfried":false},{"producto":"BIFORT","presentacion":"100 mg comp.rec.x 4","droga":"sildenafil","laboratorio":"Finadiet","mg":"100 mg","qty":4,"pvp_dic":11898.87,"pvp_feb":12220.14,"var_pct":2.7,"ppu_dic":2974.72,"ppu_feb":3055.03,"is_siegfried":false},{"producto":"VORST","presentacion":"50 mg comp.x 2","droga":"sildenafil","laboratorio":"Laboratorios Bernabó","mg":"50 mg","qty":2,"pvp_dic":5934.12,"pvp_feb":6100.28,"var_pct":2.8,"ppu_dic":2967.06,"ppu_feb":3050.14,"is_siegfried":false},{"producto":"VORST","presentacion":"50 mg comp.x 4","droga":"sildenafil","laboratorio":"Laboratorios Bernabó","mg":"50 mg","qty":4,"pvp_dic":10588.21,"pvp_feb":10588.21,"var_pct":0,"ppu_dic":2647.05,"ppu_feb":2647.05,"is_siegfried":false},{"producto":"VORST","presentacion":"100 mg comp.x 2","droga":"sildenafil","laboratorio":"Laboratorios Bernabó","mg":"100 mg","qty":2,"pvp_dic":8130.58,"pvp_feb":8293.19,"var_pct":2.0,"ppu_dic":4065.29,"ppu_feb":4146.6,"is_siegfried":false},{"producto":"VORST","presentacion":"100 mg comp.x 4","droga":"sildenafil","laboratorio":"Laboratorios Bernabó","mg":"100 mg","qty":4,"pvp_dic":14076.83,"pvp_feb":14501.95,"var_pct":3.02,"ppu_dic":3519.21,"ppu_feb":3625.49,"is_siegfried":false},{"producto":"ACTIVIL","presentacion":"100 mg comp.x 2","droga":"sildenafil","laboratorio":"Casasco","mg":"100 mg","qty":2,"pvp_dic":8450.09,"pvp_feb":8450.09,"var_pct":0,"ppu_dic":4225.05,"ppu_feb":4225.05,"is_siegfried":false},{"producto":"FIRMEL","presentacion":"50 mg comp.x 2","droga":"sildenafil","laboratorio":"Craveri","mg":"50 mg","qty":2,"pvp_dic":7112.83,"pvp_feb":7767.2,"var_pct":9.2,"ppu_dic":3556.41,"ppu_feb":3883.6,"is_siegfried":false},{"producto":"FIRMEL","presentacion":"50 mg comp.x 10","droga":"sildenafil","laboratorio":"Craveri","mg":"50 mg","qty":10,"pvp_dic":29350.99,"pvp_feb":32051.28,"var_pct":9.2,"ppu_dic":2935.1,"ppu_feb":3205.13,"is_siegfried":false},{"producto":"VIMAX","presentacion":"50 mg comp.x 6","droga":"sildenafil","laboratorio":"Roemmers","mg":"50 mg","qty":6,"pvp_dic":15979,"pvp_feb":16902,"var_pct":5.78,"ppu_dic":2663.17,"ppu_feb":2817.0,"is_siegfried":false},{"producto":"VIMAX","presentacion":"100 mg comp.x 6","droga":"sildenafil","laboratorio":"Roemmers","mg":"100 mg","qty":6,"pvp_dic":21971,"pvp_feb":23241,"var_pct":5.78,"ppu_dic":3661.83,"ppu_feb":3873.5,"is_siegfried":false},{"producto":"MAGNUS","presentacion":"25 mg comp.rec.x 2","droga":"sildenafil","laboratorio":"Siegfried","mg":"25 mg","qty":2,"pvp_dic":4967.83,"pvp_feb":4967.83,"var_pct":0,"ppu_dic":2483.91,"ppu_feb":2483.91,"is_siegfried":true},{"producto":"MAGNUS","presentacion":"25 mg comp.rec.x 10","droga":"sildenafil","laboratorio":"Siegfried","mg":"25 mg","qty":10,"pvp_dic":23344.51,"pvp_feb":23344.51,"var_pct":0,"ppu_dic":2334.45,"ppu_feb":2334.45,"is_siegfried":true},{"producto":"MAGNUS","presentacion":"50 mg comp.rec.x 2","droga":"sildenafil","laboratorio":"Siegfried","mg":"50 mg","qty":2,"pvp_dic":6328.63,"pvp_feb":6328.63,"var_pct":0,"ppu_dic":3164.32,"ppu_feb":3164.32,"is_siegfried":true},{"producto":"MAGNUS","presentacion":"50 mg comp.rec.x 10","droga":"sildenafil","laboratorio":"Siegfried","mg":"50 mg","qty":10,"pvp_dic":29739.06,"pvp_feb":29739.06,"var_pct":0,"ppu_dic":2973.91,"ppu_feb":2973.91,"is_siegfried":true},{"producto":"MAGNUS","presentacion":"100 mg comp.rec.x 2","droga":"sildenafil","laboratorio":"Siegfried","mg":"100 mg","qty":2,"pvp_dic":9126.17,"pvp_feb":9126.17,"var_pct":0,"ppu_dic":4563.09,"ppu_feb":4563.09,"is_siegfried":true},{"producto":"MAGNUS","presentacion":"100 mg comp.rec.x 10","droga":"sildenafil","laboratorio":"Siegfried","mg":"100 mg","qty":10,"pvp_dic":42885.05,"pvp_feb":42885.05,"var_pct":0,"ppu_dic":4288.51,"ppu_feb":4288.51,"is_siegfried":true},{"producto":"BIFORT","presentacion":"25 mg comp.rec.x 10","droga":"sildenafil","laboratorio":"Finadiet","mg":"25 mg","qty":10,"pvp_dic":18727.1,"pvp_feb":19232.73,"var_pct":2.7,"ppu_dic":1872.71,"ppu_feb":1923.27,"is_siegfried":false},{"producto":"BIFORT","presentacion":"100 mg comp.rec.x 10","droga":"sildenafil","laboratorio":"Finadiet","mg":"100 mg","qty":10,"pvp_dic":31271.72,"pvp_feb":32116.06,"var_pct":2.7,"ppu_dic":3127.17,"ppu_feb":3211.61,"is_siegfried":false},{"producto":"VORST","presentacion":"25 mg comp.x 6","droga":"sildenafil","laboratorio":"Laboratorios Bernabó","mg":"25 mg","qty":6,"pvp_dic":14073.27,"pvp_feb":14886.87,"var_pct":5.78,"ppu_dic":2345.55,"ppu_feb":2481.14,"is_siegfried":false},{"producto":"VORST","presentacion":"50 mg comp.x 6","droga":"sildenafil","laboratorio":"Laboratorios Bernabó","mg":"50 mg","qty":6,"pvp_dic":15821.89,"pvp_feb":16427.55,"var_pct":3.83,"ppu_dic":2636.98,"ppu_feb":2737.92,"is_siegfried":false},{"producto":"VORST","presentacion":"100 mg comp.x 6","droga":"sildenafil","laboratorio":"Laboratorios Bernabó","mg":"100 mg","qty":6,"pvp_dic":21910.27,"pvp_feb":22974.24,"var_pct":4.86,"ppu_dic":3651.71,"ppu_feb":3829.04,"is_siegfried":false},{"producto":"MAGNUS","presentacion":"50 mg comp.rec.x 20","droga":"sildenafil","laboratorio":"Siegfried","mg":"50 mg","qty":20,"pvp_dic":53724.11,"pvp_feb":53724.11,"var_pct":0,"ppu_dic":2686.21,"ppu_feb":2686.21,"is_siegfried":true},{"producto":"EXPIT","presentacion":"50 mg comp.rec.x 2","droga":"sildenafil","laboratorio":"Lazar","mg":"50 mg","qty":2,"pvp_dic":4840.55,"pvp_feb":5120.4,"var_pct":5.78,"ppu_dic":2420.28,"ppu_feb":2560.2,"is_siegfried":false},{"producto":"BIFORT","presentacion":"50 mg comp.rec.x 20","droga":"sildenafil","laboratorio":"Finadiet","mg":"50 mg","qty":20,"pvp_dic":44475.08,"pvp_feb":45675.9,"var_pct":2.7,"ppu_dic":2223.75,"ppu_feb":2283.8,"is_siegfried":false},{"producto":"TECNOMAX","presentacion":"50 mg comp.x 2","droga":"sildenafil","laboratorio":"Adium","mg":"50 mg","qty":2,"pvp_dic":1902.52,"pvp_feb":1902.52,"var_pct":0,"ppu_dic":951.26,"ppu_feb":951.26,"is_siegfried":false},{"producto":"CIALIS 20","presentacion":"20 mg comp.rec.x 1","droga":"tadalafilo","laboratorio":"Adium","mg":"20 mg","qty":1,"pvp_dic":21722.87,"pvp_feb":22978.71,"var_pct":5.78,"ppu_dic":21722.87,"ppu_feb":22978.71,"is_siegfried":false},{"producto":"CIALIS 20","presentacion":"20 mg comp.rec.x 2","droga":"tadalafilo","laboratorio":"Adium","mg":"20 mg","qty":2,"pvp_dic":43338.21,"pvp_feb":45843.67,"var_pct":5.78,"ppu_dic":21669.1,"ppu_feb":22921.83,"is_siegfried":false},{"producto":"CIALIS 20","presentacion":"20 mg comp.rec.x 4","droga":"tadalafilo","laboratorio":"Adium","mg":"20 mg","qty":4,"pvp_dic":84312.19,"pvp_feb":89186.45,"var_pct":5.78,"ppu_dic":21078.05,"ppu_feb":22296.61,"is_siegfried":false},{"producto":"VIRIPOTENS","presentacion":"50 mg comp.rec.x 2","droga":"sildenafil","laboratorio":"Microsules Arg.","mg":"50 mg","qty":2,"pvp_dic":5601.93,"pvp_feb":5758.78,"var_pct":2.8,"ppu_dic":2800.97,"ppu_feb":2879.39,"is_siegfried":false},{"producto":"VIRIPOTENS","presentacion":"50 mg comp.rec.x 6","droga":"sildenafil","laboratorio":"Microsules Arg.","mg":"50 mg","qty":6,"pvp_dic":15904.47,"pvp_feb":16349.8,"var_pct":2.8,"ppu_dic":2650.75,"ppu_feb":2724.97,"is_siegfried":false},{"producto":"FIRMEL","presentacion":"50 mg comp.x 20","droga":"sildenafil","laboratorio":"Craveri","mg":"50 mg","qty":20,"pvp_dic":59922.43,"pvp_feb":65435.29,"var_pct":9.2,"ppu_dic":2996.12,"ppu_feb":3271.76,"is_siegfried":false},{"producto":"VORST","presentacion":"50 mg comp.x 20","droga":"sildenafil","laboratorio":"Laboratorios Bernabó","mg":"50 mg","qty":20,"pvp_dic":48758.47,"pvp_feb":51577.3,"var_pct":5.78,"ppu_dic":2437.92,"ppu_feb":2578.87,"is_siegfried":false},{"producto":"4 x 4","presentacion":"50 mg comp.rec.x 4","droga":"sildenafil","laboratorio":"ISA","mg":"50 mg","qty":4,"pvp_dic":5504,"pvp_feb":5779,"var_pct":5.0,"ppu_dic":1376.0,"ppu_feb":1444.75,"is_siegfried":false},{"producto":"VIMAX 50","presentacion":"50 mg comp.mast.x 2","droga":"sildenafil","laboratorio":"Roemmers","mg":"50 mg","qty":2,"pvp_dic":5303,"pvp_feb":5609,"var_pct":5.77,"ppu_dic":2651.5,"ppu_feb":2804.5,"is_siegfried":false},{"producto":"BIFORT-M","presentacion":"50 mg comp.mast.x 2","droga":"sildenafil","laboratorio":"Finadiet","mg":"50 mg","qty":2,"pvp_dic":5087.64,"pvp_feb":5225,"var_pct":2.7,"ppu_dic":2543.82,"ppu_feb":2612.5,"is_siegfried":false},{"producto":"BIFORT-M","presentacion":"50 mg comp.mast.x 20","droga":"sildenafil","laboratorio":"Finadiet","mg":"50 mg","qty":20,"pvp_dic":43072.26,"pvp_feb":44235.21,"var_pct":2.7,"ppu_dic":2153.61,"ppu_feb":2211.76,"is_siegfried":false},{"producto":"VORST-M","presentacion":"50 mg comp.ran.mast.x 2","droga":"sildenafil","laboratorio":"Laboratorios Bernabó","mg":"50 mg","qty":2,"pvp_dic":6009.27,"pvp_feb":6177.53,"var_pct":2.8,"ppu_dic":3004.64,"ppu_feb":3088.76,"is_siegfried":false},{"producto":"VORST-M","presentacion":"50 mg comp.ran.mast.x 6","droga":"sildenafil","laboratorio":"Laboratorios Bernabó","mg":"50 mg","qty":6,"pvp_dic":15436.49,"pvp_feb":15868.71,"var_pct":2.8,"ppu_dic":2572.75,"ppu_feb":2644.79,"is_siegfried":false},{"producto":"VORST-M","presentacion":"50 mg comp.ran.mast.x 20","droga":"sildenafil","laboratorio":"Laboratorios Bernabó","mg":"50 mg","qty":20,"pvp_dic":52206.01,"pvp_feb":53667.78,"var_pct":2.8,"ppu_dic":2610.3,"ppu_feb":2683.39,"is_siegfried":false},{"producto":"VIAGRA","presentacion":"50 mg comp.x 2","droga":"sildenafil","laboratorio":"Aspen Pharma","mg":"50 mg","qty":2,"pvp_dic":14616.91,"pvp_feb":15401.94,"var_pct":5.37,"ppu_dic":7308.45,"ppu_feb":7700.97,"is_siegfried":false},{"producto":"VIRIPOTENS M","presentacion":"frut.50 mg comp.mast.x 2","droga":"sildenafil","laboratorio":"Microsules Arg.","mg":"50 mg","qty":2,"pvp_dic":5973.61,"pvp_feb":6140.87,"var_pct":2.8,"ppu_dic":2986.8,"ppu_feb":3070.43,"is_siegfried":false},{"producto":"VIRIPOTENS","presentacion":"50 mg comp.rec.x 30","droga":"sildenafil","laboratorio":"Microsules Arg.","mg":"50 mg","qty":30,"pvp_dic":71105.31,"pvp_feb":73096.26,"var_pct":2.8,"ppu_dic":2370.18,"ppu_feb":2436.54,"is_siegfried":false},{"producto":"ALMAXIMO","presentacion":"50 mg comp.x 2","droga":"sildenafil","laboratorio":"Savant Consumer","mg":"50 mg","qty":2,"pvp_dic":6248.71,"pvp_feb":6373.68,"var_pct":2.0,"ppu_dic":3124.36,"ppu_feb":3186.84,"is_siegfried":false},{"producto":"ALMAXIMO","presentacion":"100 mg comp.x 2","droga":"sildenafil","laboratorio":"Savant Consumer","mg":"100 mg","qty":2,"pvp_dic":8184.38,"pvp_feb":8348.06,"var_pct":2.0,"ppu_dic":4092.19,"ppu_feb":4174.03,"is_siegfried":false},{"producto":"GIMONTE SILDENAFIL","presentacion":"50 mg comp.rec.x 2","droga":"sildenafil","laboratorio":"Fabra","mg":"50 mg","qty":2,"pvp_dic":5699,"pvp_feb":6029,"var_pct":5.79,"ppu_dic":2849.5,"ppu_feb":3014.5,"is_siegfried":false},{"producto":"GIMONTE SILDENAFIL","presentacion":"50 mg comp.rec.x 10","droga":"sildenafil","laboratorio":"Fabra","mg":"50 mg","qty":10,"pvp_dic":27232,"pvp_feb":28806,"var_pct":5.78,"ppu_dic":2723.2,"ppu_feb":2880.6,"is_siegfried":false},{"producto":"ACTIVIL MASTICABLE","presentacion":"50 mg comp.mast.x 2","droga":"sildenafil","laboratorio":"Casasco","mg":"50 mg","qty":2,"pvp_dic":6451.16,"pvp_feb":6451.16,"var_pct":0,"ppu_dic":3225.58,"ppu_feb":3225.58,"is_siegfried":false},{"producto":"MAGNUS","presentacion":"100 mg comp.mast.x 2","droga":"sildenafil","laboratorio":"Siegfried","mg":"100 mg","qty":2,"pvp_dic":9126.17,"pvp_feb":9126.17,"var_pct":0,"ppu_dic":4563.09,"ppu_feb":4563.09,"is_siegfried":true},{"producto":"MAGNUS","presentacion":"100 mg comp.mast.x 10","droga":"sildenafil","laboratorio":"Siegfried","mg":"100 mg","qty":10,"pvp_dic":42885.05,"pvp_feb":42885.05,"var_pct":0,"ppu_dic":4288.51,"ppu_feb":4288.51,"is_siegfried":true},{"producto":"PARAMEN VENT3","presentacion":"50 mg comp.x 30","droga":"sildenafil","laboratorio":"Vent 3","mg":"50 mg","qty":30,"pvp_dic":55049.33,"pvp_feb":55049.33,"var_pct":0,"ppu_dic":1834.98,"ppu_feb":1834.98,"is_siegfried":false},{"producto":"ALMAXIMO MASTICABLE","presentacion":"50 mg comp.mast.x 2","droga":"sildenafil","laboratorio":"Savant Consumer","mg":"50 mg","qty":2,"pvp_dic":6248.71,"pvp_feb":6373.68,"var_pct":2.0,"ppu_dic":3124.36,"ppu_feb":3186.84,"is_siegfried":false},{"producto":"SUPER-O","presentacion":"50 mg comp.rec.x 2","droga":"sildenafil","laboratorio":"Biotenk","mg":"50 mg","qty":2,"pvp_dic":5596.48,"pvp_feb":5747.58,"var_pct":2.7,"ppu_dic":2798.24,"ppu_feb":2873.79,"is_siegfried":false},{"producto":"SUPER-O","presentacion":"50 mg comp.rec.x 20","droga":"sildenafil","laboratorio":"Biotenk","mg":"50 mg","qty":20,"pvp_dic":54073.58,"pvp_feb":55533.57,"var_pct":2.7,"ppu_dic":2703.68,"ppu_feb":2776.68,"is_siegfried":false},{"producto":"FORZAK","presentacion":"50 mg comp.mast.x 2","droga":"sildenafil","laboratorio":"Biosintex","mg":"50 mg","qty":2,"pvp_dic":4877,"pvp_feb":5249,"var_pct":7.63,"ppu_dic":2438.5,"ppu_feb":2624.5,"is_siegfried":false},{"producto":"FALIC","presentacion":"50 mg comp.rec.ran.x 2","droga":"sildenafil","laboratorio":"Trb-Pharma","mg":"50 mg","qty":2,"pvp_dic":5900,"pvp_feb":6000,"var_pct":1.69,"ppu_dic":2950.0,"ppu_feb":3000.0,"is_siegfried":false},{"producto":"BIFORT-M","presentacion":"frut.50 mg comp.mast.x 2","droga":"sildenafil","laboratorio":"Finadiet","mg":"50 mg","qty":2,"pvp_dic":4668.09,"pvp_feb":4668.09,"var_pct":0,"ppu_dic":2334.05,"ppu_feb":2334.05,"is_siegfried":false},{"producto":"VIRIPOTENS M","presentacion":"menta 50mg comp.mast.x30","droga":"sildenafil","laboratorio":"Microsules Arg.","mg":"50 mg","qty":30,"pvp_dic":78310.32,"pvp_feb":80503.01,"var_pct":2.8,"ppu_dic":2610.34,"ppu_feb":2683.43,"is_siegfried":false},{"producto":"VIRIPOTENS","presentacion":"100 mg comp.rec.x 30","droga":"sildenafil","laboratorio":"Microsules Arg.","mg":"100 mg","qty":30,"pvp_dic":81842.72,"pvp_feb":84134.32,"var_pct":2.8,"ppu_dic":2728.09,"ppu_feb":2804.48,"is_siegfried":false},{"producto":"EGOMAX","presentacion":"50 mg comp.x 10","droga":"sildenafil","laboratorio":"Klonal","mg":"50 mg","qty":10,"pvp_dic":17431.87,"pvp_feb":17867.66,"var_pct":2.5,"ppu_dic":1743.19,"ppu_feb":1786.77,"is_siegfried":false},{"producto":"CIALIS 5","presentacion":"5 mg comp.rec.x 28","droga":"tadalafilo","laboratorio":"Adium","mg":"5 mg","qty":28,"pvp_dic":194304.92,"pvp_feb":205538.07,"var_pct":5.78,"ppu_dic":6939.46,"ppu_feb":7340.65,"is_siegfried":false},{"producto":"PERDURAL","presentacion":"20 mg comp.rec.x 2","droga":"tadalafilo","laboratorio":"Casasco","mg":"20 mg","qty":2,"pvp_dic":21819.42,"pvp_feb":22430.37,"var_pct":2.8,"ppu_dic":10909.71,"ppu_feb":11215.18,"is_siegfried":false},{"producto":"INVICTUS 5","presentacion":"5 mg comp.rec.x 30","droga":"tadalafilo","laboratorio":"Roemmers","mg":"5 mg","qty":30,"pvp_dic":95933,"pvp_feb":101479,"var_pct":5.78,"ppu_dic":3197.77,"ppu_feb":3382.63,"is_siegfried":false},{"producto":"INVICTUS 20","presentacion":"20 mg comp.rec.x 1","droga":"tadalafilo","laboratorio":"Roemmers","mg":"20 mg","qty":1,"pvp_dic":11226,"pvp_feb":11875,"var_pct":5.78,"ppu_dic":11226.0,"ppu_feb":11875.0,"is_siegfried":false},{"producto":"INVICTUS 20","presentacion":"20 mg comp.rec.x 2","droga":"tadalafilo","laboratorio":"Roemmers","mg":"20 mg","qty":2,"pvp_dic":22227,"pvp_feb":23512,"var_pct":5.78,"ppu_dic":11113.5,"ppu_feb":11756.0,"is_siegfried":false},{"producto":"INVICTUS 20","presentacion":"20 mg comp.rec.x 4","droga":"tadalafilo","laboratorio":"Roemmers","mg":"20 mg","qty":4,"pvp_dic":44022,"pvp_feb":46567,"var_pct":5.78,"ppu_dic":11005.5,"ppu_feb":11641.75,"is_siegfried":false},{"producto":"MAGNUS 36","presentacion":"20 mg comp.rec.x 2","droga":"tadalafilo","laboratorio":"Siegfried","mg":"20 mg","qty":2,"pvp_dic":23820.97,"pvp_feb":23820.97,"var_pct":0,"ppu_dic":11910.49,"ppu_feb":11910.49,"is_siegfried":true},{"producto":"MAGNUS 36","presentacion":"20 mg comp.rec.x 4","droga":"tadalafilo","laboratorio":"Siegfried","mg":"20 mg","qty":4,"pvp_dic":46323.07,"pvp_feb":46323.07,"var_pct":0,"ppu_dic":11580.77,"ppu_feb":11580.77,"is_siegfried":true},{"producto":"MAGNUS 36","presentacion":"20 mg comp.rec.x 10","droga":"tadalafilo","laboratorio":"Siegfried","mg":"20 mg","qty":10,"pvp_dic":99869.13,"pvp_feb":99869.13,"var_pct":0,"ppu_dic":9986.91,"ppu_feb":9986.91,"is_siegfried":true},{"producto":"VIRILON MAX","presentacion":"20 mg comp.rec.x 4","droga":"tadalafilo","laboratorio":"Temis-Lostaló","mg":"20 mg","qty":4,"pvp_dic":49341.36,"pvp_feb":50745.26,"var_pct":2.85,"ppu_dic":12335.34,"ppu_feb":12686.32,"is_siegfried":false},{"producto":"MAGNUS 36","presentacion":"20 mg comp.rec.x 1","droga":"tadalafilo","laboratorio":"Siegfried","mg":"20 mg","qty":1,"pvp_dic":12206.4,"pvp_feb":12206.4,"var_pct":0,"ppu_dic":12206.4,"ppu_feb":12206.4,"is_siegfried":true},{"producto":"MAGNUS 36","presentacion":"5 mg comp.rec.x 30","droga":"tadalafilo","laboratorio":"Siegfried","mg":"5 mg","qty":30,"pvp_dic":102601.14,"pvp_feb":102601.14,"var_pct":0,"ppu_dic":3420.04,"ppu_feb":3420.04,"is_siegfried":true},{"producto":"MOMENTUM","presentacion":"20 mg comp.rec.x 2","droga":"tadalafilo","laboratorio":"Panalab","mg":"20 mg","qty":2,"pvp_dic":17131.12,"pvp_feb":18174.4,"var_pct":6.09,"ppu_dic":8565.56,"ppu_feb":9087.2,"is_siegfried":false},{"producto":"MOMENTUM","presentacion":"20 mg comp.rec.x 4","droga":"tadalafilo","laboratorio":"Panalab","mg":"20 mg","qty":4,"pvp_dic":33543.92,"pvp_feb":35586.75,"var_pct":6.09,"ppu_dic":8385.98,"ppu_feb":8896.69,"is_siegfried":false},{"producto":"MOMENTUM","presentacion":"20 mg comp.rec.x 8","droga":"tadalafilo","laboratorio":"Panalab","mg":"20 mg","qty":8,"pvp_dic":65315.12,"pvp_feb":69292.81,"var_pct":6.09,"ppu_dic":8164.39,"ppu_feb":8661.6,"is_siegfried":false},{"producto":"VIMAX FLASH 100","presentacion":"comp.dis.buc.rap.x 2","droga":"sildenafil","laboratorio":"Roemmers","mg":"100 mg","qty":2,"pvp_dic":7357,"pvp_feb":7782,"var_pct":5.78,"ppu_dic":3678.5,"ppu_feb":3891.0,"is_siegfried":false},{"producto":"VIMAX FLASH 100","presentacion":"comp.dis.buc.rap.x 10","droga":"sildenafil","laboratorio":"Roemmers","mg":"100 mg","qty":10,"pvp_dic":35756,"pvp_feb":37823,"var_pct":5.78,"ppu_dic":3575.6,"ppu_feb":3782.3,"is_siegfried":false},{"producto":"TADAL 20","presentacion":"20 mg comp.rec.x 2","droga":"tadalafilo","laboratorio":"Finadiet","mg":"20 mg","qty":2,"pvp_dic":19187.71,"pvp_feb":19187.71,"var_pct":0,"ppu_dic":9593.85,"ppu_feb":9593.85,"is_siegfried":false},{"producto":"TADAL 20","presentacion":"20 mg comp.rec.x 4","droga":"tadalafilo","laboratorio":"Finadiet","mg":"20 mg","qty":4,"pvp_dic":37256.52,"pvp_feb":37256.52,"var_pct":0,"ppu_dic":9314.13,"ppu_feb":9314.13,"is_siegfried":false},{"producto":"TADAL 5","presentacion":"5 mg comp.rec.x 28","droga":"tadalafilo","laboratorio":"Finadiet","mg":"5 mg","qty":28,"pvp_dic":87334.56,"pvp_feb":89692.59,"var_pct":2.7,"ppu_dic":3119.09,"ppu_feb":3203.31,"is_siegfried":false},{"producto":"PERDURAL","presentacion":"5 mg comp.rec.x 28","droga":"tadalafilo","laboratorio":"Casasco","mg":"5 mg","qty":28,"pvp_dic":87464.19,"pvp_feb":89913.19,"var_pct":2.8,"ppu_dic":3123.72,"ppu_feb":3211.19,"is_siegfried":false},{"producto":"SUPER-O","presentacion":"100 mg comp.rec.x 2","droga":"sildenafil","laboratorio":"Biotenk","mg":"100 mg","qty":2,"pvp_dic":7330.08,"pvp_feb":7527.99,"var_pct":2.7,"ppu_dic":3665.04,"ppu_feb":3763.99,"is_siegfried":false},{"producto":"SUPER-O","presentacion":"100 mg comp.rec.x 20","droga":"sildenafil","laboratorio":"Biotenk","mg":"100 mg","qty":20,"pvp_dic":71866.4,"pvp_feb":73806.79,"var_pct":2.7,"ppu_dic":3593.32,"ppu_feb":3690.34,"is_siegfried":false},{"producto":"H36 LAZAR","presentacion":"20 mg comp.rec.x 2","droga":"tadalafilo","laboratorio":"Lazar","mg":"20 mg","qty":2,"pvp_dic":19501.83,"pvp_feb":20629.27,"var_pct":5.78,"ppu_dic":9750.92,"ppu_feb":10314.64,"is_siegfried":false},{"producto":"MOMENTUM","presentacion":"5 mg comp.rec.x 30","droga":"tadalafilo","laboratorio":"Panalab","mg":"5 mg","qty":30,"pvp_dic":76515.36,"pvp_feb":79598.93,"var_pct":4.03,"ppu_dic":2550.51,"ppu_feb":2653.3,"is_siegfried":false},{"producto":"LEVAL","presentacion":"5 mg comp.x 30","droga":"tadalafilo","laboratorio":"Elea","mg":"5 mg","qty":30,"pvp_dic":107172.96,"pvp_feb":109435.38,"var_pct":2.11,"ppu_dic":3572.43,"ppu_feb":3647.85,"is_siegfried":false},{"producto":"LEVAL","presentacion":"20 mg comp.x 1","droga":"tadalafilo","laboratorio":"Elea","mg":"20 mg","qty":1,"pvp_dic":12543.18,"pvp_feb":12681.28,"var_pct":1.1,"ppu_dic":12543.18,"ppu_feb":12681.28,"is_siegfried":false},{"producto":"LEVAL","presentacion":"20 mg comp.x 2","droga":"tadalafilo","laboratorio":"Elea","mg":"20 mg","qty":2,"pvp_dic":24338.29,"pvp_feb":24852.07,"var_pct":2.11,"ppu_dic":12169.15,"ppu_feb":12426.03,"is_siegfried":false},{"producto":"LEVAL","presentacion":"20 mg comp.x 4","droga":"tadalafilo","laboratorio":"Elea","mg":"20 mg","qty":4,"pvp_dic":47874.02,"pvp_feb":48884.64,"var_pct":2.11,"ppu_dic":11968.51,"ppu_feb":12221.16,"is_siegfried":false},{"producto":"VIAGRA","presentacion":"50 mg comp.x 10","droga":"sildenafil","laboratorio":"Aspen Pharma","mg":"50 mg","qty":10,"pvp_dic":86757.46,"pvp_feb":91415.86,"var_pct":5.37,"ppu_dic":8675.75,"ppu_feb":9141.59,"is_siegfried":false},{"producto":"VIAGRA","presentacion":"50 mg comp.x 20","droga":"sildenafil","laboratorio":"Aspen Pharma","mg":"50 mg","qty":20,"pvp_dic":104329.22,"pvp_feb":109931.47,"var_pct":5.37,"ppu_dic":5216.46,"ppu_feb":5496.57,"is_siegfried":false},{"producto":"H36 LAZAR","presentacion":"5 mg comp.rec.x 30","droga":"tadalafilo","laboratorio":"Lazar","mg":"5 mg","qty":30,"pvp_dic":92247.43,"pvp_feb":97580.44,"var_pct":5.78,"ppu_dic":3074.91,"ppu_feb":3252.68,"is_siegfried":false},{"producto":"EQUITONE","presentacion":"5 mg comp.x 30","droga":"tadalafilo","laboratorio":"Fecofar","mg":"5 mg","qty":30,"pvp_dic":73058.22,"pvp_feb":74519.39,"var_pct":2.0,"ppu_dic":2435.27,"ppu_feb":2483.98,"is_siegfried":false},{"producto":"EQUITONE","presentacion":"20 mg comp.x 2","droga":"tadalafilo","laboratorio":"Fecofar","mg":"20 mg","qty":2,"pvp_dic":16888.08,"pvp_feb":17225.84,"var_pct":2.0,"ppu_dic":8444.04,"ppu_feb":8612.92,"is_siegfried":false},{"producto":"TADALAFILO TEVA","presentacion":"5 mg tab.x 28","droga":"tadalafilo","laboratorio":"Teva Argentina","mg":"5 mg","qty":28,"pvp_dic":91574.48,"pvp_feb":96868.58,"var_pct":5.78,"ppu_dic":3270.52,"ppu_feb":3459.59,"is_siegfried":false},{"producto":"LABSAMAX 36 H","presentacion":"5 mg comp.rec.x 30","droga":"tadalafilo","laboratorio":"Labsa","mg":"5 mg","qty":30,"pvp_dic":78067.36,"pvp_feb":78067.36,"var_pct":0,"ppu_dic":2602.25,"ppu_feb":2602.25,"is_siegfried":false},{"producto":"LABSAMAX 36 H","presentacion":"20 mg comp.rec.x 2","droga":"tadalafilo","laboratorio":"Labsa","mg":"20 mg","qty":2,"pvp_dic":15686.96,"pvp_feb":15686.96,"var_pct":0,"ppu_dic":7843.48,"ppu_feb":7843.48,"is_siegfried":false},{"producto":"VIRILON MAX","presentacion":"5 mg comp.rec.x 30","droga":"tadalafilo","laboratorio":"Temis-Lostaló","mg":"5 mg","qty":30,"pvp_dic":101601.64,"pvp_feb":104492.48,"var_pct":2.85,"ppu_dic":3386.72,"ppu_feb":3483.08,"is_siegfried":false},{"producto":"VORST 36","presentacion":"5 mg comp.rec.x 30","droga":"tadalafilo","laboratorio":"Laboratorios Bernabó","mg":"5 mg","qty":30,"pvp_dic":99071.7,"pvp_feb":100557.78,"var_pct":1.5,"ppu_dic":3302.39,"ppu_feb":3351.93,"is_siegfried":false},{"producto":"VORST 36","presentacion":"20 mg comp.rec.x 1","droga":"tadalafilo","laboratorio":"Laboratorios Bernabó","mg":"20 mg","qty":1,"pvp_dic":12737.86,"pvp_feb":12737.86,"var_pct":0,"ppu_dic":12737.86,"ppu_feb":12737.86,"is_siegfried":false},{"producto":"VORST 36","presentacion":"20 mg comp.rec.x 2","droga":"tadalafilo","laboratorio":"Laboratorios Bernabó","mg":"20 mg","qty":2,"pvp_dic":23330.3,"pvp_feb":23330.3,"var_pct":0,"ppu_dic":11665.15,"ppu_feb":11665.15,"is_siegfried":false},{"producto":"VORST 36","presentacion":"20 mg comp.rec.x 4","droga":"tadalafilo","laboratorio":"Laboratorios Bernabó","mg":"20 mg","qty":4,"pvp_dic":44815.69,"pvp_feb":45942.81,"var_pct":2.52,"ppu_dic":11203.92,"ppu_feb":11485.7,"is_siegfried":false},{"producto":"VORST 36","presentacion":"20 mg comp.rec.x 10","droga":"tadalafilo","laboratorio":"Laboratorios Bernabó","mg":"20 mg","qty":10,"pvp_dic":101962.22,"pvp_feb":101962.22,"var_pct":0,"ppu_dic":10196.22,"ppu_feb":10196.22,"is_siegfried":false},{"producto":"MOMENTUM","presentacion":"5 mg comp.rec.x 60","droga":"tadalafilo","laboratorio":"Panalab","mg":"5 mg","qty":60,"pvp_dic":131941,"pvp_feb":137258.22,"var_pct":4.03,"ppu_dic":2199.02,"ppu_feb":2287.64,"is_siegfried":false},{"producto":"FALIC 36","presentacion":"5 mg comp.rec.x 30","droga":"tadalafilo","laboratorio":"Trb-Pharma","mg":"5 mg","qty":30,"pvp_dic":69500.01,"pvp_feb":73000.01,"var_pct":5.04,"ppu_dic":2316.67,"ppu_feb":2433.33,"is_siegfried":false},{"producto":"FALIC 36","presentacion":"20 mg comp.rec.x 2","droga":"tadalafilo","laboratorio":"Trb-Pharma","mg":"20 mg","qty":2,"pvp_dic":15500.01,"pvp_feb":16275.01,"var_pct":5.0,"ppu_dic":7750.01,"ppu_feb":8137.51,"is_siegfried":false},{"producto":"ALMAXIMO 36","presentacion":"20 mg comp.rec.x 8","droga":"tadalafilo","laboratorio":"Savant Consumer","mg":"20 mg","qty":8,"pvp_dic":85968.9,"pvp_feb":87688.28,"var_pct":2.0,"ppu_dic":10746.11,"ppu_feb":10961.03,"is_siegfried":false},{"producto":"SUPER-O 36","presentacion":"20 mg comp.rec.x 2","droga":"tadalafilo","laboratorio":"Biotenk","mg":"20 mg","qty":2,"pvp_dic":20088.94,"pvp_feb":20631.34,"var_pct":2.7,"ppu_dic":10044.47,"ppu_feb":10315.67,"is_siegfried":false},{"producto":"SUPER-O 36","presentacion":"5 mg comp.rec.x 30","droga":"tadalafilo","laboratorio":"Biotenk","mg":"5 mg","qty":30,"pvp_dic":69908.92,"pvp_feb":71796.46,"var_pct":2.7,"ppu_dic":2330.3,"ppu_feb":2393.22,"is_siegfried":false},{"producto":"TALIS","presentacion":"5 mg comp.x 30","droga":"tadalafilo","laboratorio":"Eurofarma","mg":"5 mg","qty":30,"pvp_dic":63001.86,"pvp_feb":64765.91,"var_pct":2.8,"ppu_dic":2100.06,"ppu_feb":2158.86,"is_siegfried":false},{"producto":"VITARFIL","presentacion":"50 mg comp.rec.x 10","droga":"sildenafil","laboratorio":"Monserrat","mg":"50 mg","qty":10,"pvp_dic":21160,"pvp_feb":22275,"var_pct":5.27,"ppu_dic":2116.0,"ppu_feb":2227.5,"is_siegfried":false},{"producto":"VIRIPOTENS MAX 5","presentacion":"5 mg comp.x 30","droga":"tadalafilo","laboratorio":"Microsules Arg.","mg":"5 mg","qty":30,"pvp_dic":87082.39,"pvp_feb":89520.7,"var_pct":2.8,"ppu_dic":2902.75,"ppu_feb":2984.02,"is_siegfried":false},{"producto":"VIRIPOTENS MAX 20","presentacion":"20 mg comp.x 2","droga":"tadalafilo","laboratorio":"Microsules Arg.","mg":"20 mg","qty":2,"pvp_dic":22146.53,"pvp_feb":22766.63,"var_pct":2.8,"ppu_dic":11073.26,"ppu_feb":11383.32,"is_siegfried":false},{"producto":"VIRIPOTENS MAX 20","presentacion":"20 mg comp.x 4","droga":"tadalafilo","laboratorio":"Microsules Arg.","mg":"20 mg","qty":4,"pvp_dic":40547.15,"pvp_feb":41682.48,"var_pct":2.8,"ppu_dic":10136.79,"ppu_feb":10420.62,"is_siegfried":false},{"producto":"LEVITRIN 100","presentacion":"comp.rec.x 10","droga":"sildenafil","laboratorio":"Rospaw","mg":"100 mg","qty":10,"pvp_dic":30069.18,"pvp_feb":30069.18,"var_pct":0,"ppu_dic":3006.92,"ppu_feb":3006.92,"is_siegfried":false},{"producto":"TADALAFILO TEVA","presentacion":"20 mg tabl.x 2","droga":"tadalafilo","laboratorio":"Teva Argentina","mg":"20 mg","qty":2,"pvp_dic":23766.12,"pvp_feb":25140.09,"var_pct":5.78,"ppu_dic":11883.06,"ppu_feb":12570.05,"is_siegfried":false},{"producto":"TADALAFILO RICHET","presentacion":"5 mg comp.x 28","droga":"tadalafilo","laboratorio":"Richet","mg":"5 mg","qty":28,"pvp_dic":98978.32,"pvp_feb":100462.99,"var_pct":1.5,"ppu_dic":3534.94,"ppu_feb":3587.96,"is_siegfried":false},{"producto":"TADALAFILO RICHET","presentacion":"20 mg comp.x 2","droga":"tadalafilo","laboratorio":"Richet","mg":"20 mg","qty":2,"pvp_dic":15478.17,"pvp_feb":15710.35,"var_pct":1.5,"ppu_dic":7739.09,"ppu_feb":7855.18,"is_siegfried":false},{"producto":"TADALAFILO RICHET","presentacion":"20 mg comp.x 4","droga":"tadalafilo","laboratorio":"Richet","mg":"20 mg","qty":4,"pvp_dic":31798.39,"pvp_feb":32275.37,"var_pct":1.5,"ppu_dic":7949.6,"ppu_feb":8068.84,"is_siegfried":false},{"producto":"ALMAXIMO","presentacion":"100 mg comp.rec.x 20","droga":"sildenafil","laboratorio":"Savant Consumer","mg":"100 mg","qty":20,"pvp_dic":81843.67,"pvp_feb":83480.54,"var_pct":2.0,"ppu_dic":4092.18,"ppu_feb":4174.03,"is_siegfried":false},{"producto":"ALMAXIMO","presentacion":"50 mg comp.rec.x 20","droga":"sildenafil","laboratorio":"Savant Consumer","mg":"50 mg","qty":20,"pvp_dic":62487.06,"pvp_feb":63736.8,"var_pct":2.0,"ppu_dic":3124.35,"ppu_feb":3186.84,"is_siegfried":false},{"producto":"ALMAXIMO MASTICABLE","presentacion":"50 mg comp.mast.x 20","droga":"sildenafil","laboratorio":"Savant Consumer","mg":"50 mg","qty":20,"pvp_dic":62487.06,"pvp_feb":63736.8,"var_pct":2.0,"ppu_dic":3124.35,"ppu_feb":3186.84,"is_siegfried":false},{"producto":"DROTAQ","presentacion":"5 mg comp.rec.x 30","droga":"tadalafilo","laboratorio":"Baliarda","mg":"5 mg","qty":30,"pvp_dic":94384.41,"pvp_feb":99840.96,"var_pct":5.78,"ppu_dic":3146.15,"ppu_feb":3328.03,"is_siegfried":false},{"producto":"DROTAQ","presentacion":"20 mg comp.rec.x 1","droga":"tadalafilo","laboratorio":"Baliarda","mg":"20 mg","qty":1,"pvp_dic":11831.85,"pvp_feb":12515.87,"var_pct":5.78,"ppu_dic":11831.85,"ppu_feb":12515.87,"is_siegfried":false},{"producto":"DROTAQ","presentacion":"20 mg comp.rec.x 2","droga":"tadalafilo","laboratorio":"Baliarda","mg":"20 mg","qty":2,"pvp_dic":22657.73,"pvp_feb":23967.62,"var_pct":5.78,"ppu_dic":11328.86,"ppu_feb":11983.81,"is_siegfried":false},{"producto":"DROTAQ","presentacion":"20 mg comp.rec.x 4","droga":"tadalafilo","laboratorio":"Baliarda","mg":"20 mg","qty":4,"pvp_dic":43895.85,"pvp_feb":46433.55,"var_pct":5.78,"ppu_dic":10973.96,"ppu_feb":11608.39,"is_siegfried":false},{"producto":"INVICTUS MASTICABLE","presentacion":"20 mg comp.mast.x 1","droga":"tadalafilo","laboratorio":"Roemmers","mg":"20 mg","qty":1,"pvp_dic":10824,"pvp_feb":11376,"var_pct":5.1,"ppu_dic":10824.0,"ppu_feb":11376.0,"is_siegfried":false},{"producto":"INVICTUS MASTICABLE","presentacion":"20 mg comp.mast.x 2","droga":"tadalafilo","laboratorio":"Roemmers","mg":"20 mg","qty":2,"pvp_dic":20844,"pvp_feb":21907,"var_pct":5.1,"ppu_dic":10422.0,"ppu_feb":10953.5,"is_siegfried":false},{"producto":"INVICTUS MASTICABLE","presentacion":"20 mg comp.mast.x 4","droga":"tadalafilo","laboratorio":"Roemmers","mg":"20 mg","qty":4,"pvp_dic":40130,"pvp_feb":42178,"var_pct":5.1,"ppu_dic":10032.5,"ppu_feb":10544.5,"is_siegfried":false},{"producto":"H36 LAZAR","presentacion":"20 mg comp.rec.x 4","droga":"tadalafilo","laboratorio":"Lazar","mg":"20 mg","qty":4,"pvp_dic":36247.97,"pvp_feb":38343.53,"var_pct":5.78,"ppu_dic":9061.99,"ppu_feb":9585.88,"is_siegfried":false},{"producto":"ROSPOWER36","presentacion":"5 mg comp.rec.x 30","droga":"tadalafilo","laboratorio":"Rospaw","mg":"5 mg","qty":30,"pvp_dic":73740.44,"pvp_feb":74477.84,"var_pct":1.0,"ppu_dic":2458.01,"ppu_feb":2482.59,"is_siegfried":false},{"producto":"ROSPOWER36","presentacion":"20 mg comp.rec.x 2","droga":"tadalafilo","laboratorio":"Rospaw","mg":"20 mg","qty":2,"pvp_dic":18142.49,"pvp_feb":18142.49,"var_pct":0,"ppu_dic":9071.25,"ppu_feb":9071.25,"is_siegfried":false},{"producto":"ROSPOWER36","presentacion":"20 mg comp.rec.x 4","droga":"tadalafilo","laboratorio":"Rospaw","mg":"20 mg","qty":4,"pvp_dic":32773.53,"pvp_feb":32773.53,"var_pct":0,"ppu_dic":8193.38,"ppu_feb":8193.38,"is_siegfried":false},{"producto":"LEVITRIN 100","presentacion":"comp.rec.x 20","droga":"sildenafil","laboratorio":"Rospaw","mg":"100 mg","qty":20,"pvp_dic":51115.22,"pvp_feb":51115.22,"var_pct":0,"ppu_dic":2555.76,"ppu_feb":2555.76,"is_siegfried":false},{"producto":"LEVITRIN 50","presentacion":"comp.rec.x 30","droga":"sildenafil","laboratorio":"Rospaw","mg":"50 mg","qty":30,"pvp_dic":48110.68,"pvp_feb":48110.68,"var_pct":0,"ppu_dic":1603.69,"ppu_feb":1603.69,"is_siegfried":false},{"producto":"ALMAXIMO MASTICABLE","presentacion":"100 mg comp.mast.x 2","droga":"sildenafil","laboratorio":"Savant Consumer","mg":"100 mg","qty":2,"pvp_dic":9093.74,"pvp_feb":9275.61,"var_pct":2.0,"ppu_dic":4546.87,"ppu_feb":4637.81,"is_siegfried":false},{"producto":"ALMAXIMO MASTICABLE","presentacion":"100 mg comp.mast.x 20","droga":"sildenafil","laboratorio":"Savant Consumer","mg":"100 mg","qty":20,"pvp_dic":90937.39,"pvp_feb":92756.13,"var_pct":2.0,"ppu_dic":4546.87,"ppu_feb":4637.81,"is_siegfried":false},{"producto":"ALMAXIMO 36","presentacion":"5 mg comp.rec.x 30","droga":"tadalafilo","laboratorio":"Savant Consumer","mg":"5 mg","qty":30,"pvp_dic":78928.8,"pvp_feb":80507.38,"var_pct":2.0,"ppu_dic":2630.96,"ppu_feb":2683.58,"is_siegfried":false},{"producto":"FIRMEL 36","presentacion":"5 mg comp.x 30","droga":"tadalafilo","laboratorio":"Craveri","mg":"5 mg","qty":30,"pvp_dic":81382.62,"pvp_feb":88869.82,"var_pct":9.2,"ppu_dic":2712.75,"ppu_feb":2962.33,"is_siegfried":false},{"producto":"FIRMEL 36","presentacion":"20 mg comp.x 2","droga":"tadalafilo","laboratorio":"Craveri","mg":"20 mg","qty":2,"pvp_dic":17793.74,"pvp_feb":19430.76,"var_pct":9.2,"ppu_dic":8896.87,"ppu_feb":9715.38,"is_siegfried":false},{"producto":"FIRMEL 36","presentacion":"20 mg comp.x 4","droga":"tadalafilo","laboratorio":"Craveri","mg":"20 mg","qty":4,"pvp_dic":34598.93,"pvp_feb":37782.03,"var_pct":9.2,"ppu_dic":8649.73,"ppu_feb":9445.51,"is_siegfried":false},{"producto":"TADAL HAP","presentacion":"20 mg comp.rec.x 30","droga":"tadalafilo","laboratorio":"Finadiet","mg":"20 mg","qty":30,"pvp_dic":327801.07,"pvp_feb":341708.04,"var_pct":4.24,"ppu_dic":10926.7,"ppu_feb":11390.27,"is_siegfried":false},{"producto":"VIRIPOTENS 100","presentacion":"100 mg comp.rec.x 2","droga":"sildenafil","laboratorio":"Microsules Arg.","mg":"100 mg","qty":2,"pvp_dic":9325.66,"pvp_feb":9586.78,"var_pct":2.8,"ppu_dic":4662.83,"ppu_feb":4793.39,"is_siegfried":false},{"producto":"TALIS","presentacion":"20 mg comp.rec.x 2","droga":"tadalafilo","laboratorio":"Eurofarma","mg":"20 mg","qty":2,"pvp_dic":21677.67,"pvp_feb":22284.64,"var_pct":2.8,"ppu_dic":10838.84,"ppu_feb":11142.32,"is_siegfried":false},{"producto":"JAST","presentacion":"5 mg comp.ran.x 30","droga":"tadalafilo","laboratorio":"Montpellier","mg":"5 mg","qty":30,"pvp_dic":75488.33,"pvp_feb":76243.22,"var_pct":1.0,"ppu_dic":2516.28,"ppu_feb":2541.44,"is_siegfried":false},{"producto":"JAST","presentacion":"20 mg comp.ran.x 2","droga":"tadalafilo","laboratorio":"Montpellier","mg":"20 mg","qty":2,"pvp_dic":19073.71,"pvp_feb":19264.45,"var_pct":1.0,"ppu_dic":9536.85,"ppu_feb":9632.23,"is_siegfried":false},{"producto":"QUARTIER","presentacion":"20 mg comp.rec.x 2","droga":"tadalafilo","laboratorio":"ISA","mg":"20 mg","qty":2,"pvp_dic":11831,"pvp_feb":11831,"var_pct":0,"ppu_dic":5915.5,"ppu_feb":5915.5,"is_siegfried":false},{"producto":"SUPER-O 36","presentacion":"20 mg comp.rec.x 4","droga":"tadalafilo","laboratorio":"Biotenk","mg":"20 mg","qty":4,"pvp_dic":34367.09,"pvp_feb":35295,"var_pct":2.7,"ppu_dic":8591.77,"ppu_feb":8823.75,"is_siegfried":false},{"producto":"SUPER-O 36","presentacion":"20 mg comp.rec.x 8","droga":"tadalafilo","laboratorio":"Biotenk","mg":"20 mg","qty":8,"pvp_dic":64715.4,"pvp_feb":66462.72,"var_pct":2.7,"ppu_dic":8089.43,"ppu_feb":8307.84,"is_siegfried":false},{"producto":"EXPIT","presentacion":"100 mg comp.rec.x 2 VST","droga":"sildenafil","laboratorio":"Lazar","mg":"100 mg","qty":2,"pvp_dic":7272.92,"pvp_feb":7633.51,"var_pct":4.96,"ppu_dic":3636.46,"ppu_feb":3816.76,"is_siegfried":false},{"producto":"MAGNUS","presentacion":"50 mg comp.x 1","droga":"sildenafil","laboratorio":"Siegfried","mg":"50 mg","qty":1,"pvp_dic":3322.52,"pvp_feb":3322.52,"var_pct":0,"ppu_dic":3322.52,"ppu_feb":3322.52,"is_siegfried":true},{"producto":"MAGNUS 36","presentacion":"20 mg comp.mast.x 1","droga":"tadalafilo","laboratorio":"Siegfried","mg":"20 mg","qty":1,"pvp_dic":12206.4,"pvp_feb":12206.4,"var_pct":0,"ppu_dic":12206.4,"ppu_feb":12206.4,"is_siegfried":true},{"producto":"VIRIPOTENS MAX 20","presentacion":"20 mg comp.x 8","droga":"tadalafilo","laboratorio":"Microsules Arg.","mg":"20 mg","qty":8,"pvp_dic":59931.83,"pvp_feb":61609.92,"var_pct":2.8,"ppu_dic":7491.48,"ppu_feb":7701.24,"is_siegfried":false},{"producto":"MOMENTUM","presentacion":"10 mg comp.x 30","droga":"tadalafilo","laboratorio":"Panalab","mg":"10 mg","qty":30,"pvp_dic":88166.81,"pvp_feb":94444.28,"var_pct":7.12,"ppu_dic":2938.89,"ppu_feb":3148.14,"is_siegfried":false},{"producto":"LEVAL","presentacion":"20 mg comp.x 60","droga":"tadalafilo","laboratorio":"Elea","mg":"20 mg","qty":60,"pvp_dic":712861.49,"pvp_feb":741661.09,"var_pct":4.04,"ppu_dic":11881.02,"ppu_feb":12361.02,"is_siegfried":false},{"producto":"SUSTENGO","presentacion":"20 mg comp.rec.x 60","droga":"tadalafilo","laboratorio":"Varifarma","mg":"20 mg","qty":60,"pvp_dic":465246.6,"pvp_feb":492143.44,"var_pct":5.78,"ppu_dic":7754.11,"ppu_feb":8202.39,"is_siegfried":false},{"producto":"DROTAQ HP","presentacion":"20 mg comp.rec.x 30","droga":"tadalafilo","laboratorio":"Baliarda","mg":"20 mg","qty":30,"pvp_dic":318413.77,"pvp_feb":336821.91,"var_pct":5.78,"ppu_dic":10613.79,"ppu_feb":11227.4,"is_siegfried":false},{"producto":"DROTAQ HP","presentacion":"20 mg comp.rec.x 60","droga":"tadalafilo","laboratorio":"Baliarda","mg":"20 mg","qty":60,"pvp_dic":623795.89,"pvp_feb":659858.78,"var_pct":5.78,"ppu_dic":10396.6,"ppu_feb":10997.65,"is_siegfried":false},{"producto":"PERDURAL","presentacion":"20 mg comp.rec.x 60","droga":"tadalafilo","laboratorio":"Casasco","mg":"20 mg","qty":60,"pvp_dic":747598.31,"pvp_feb":768531.06,"var_pct":2.8,"ppu_dic":12459.97,"ppu_feb":12808.85,"is_siegfried":false},{"producto":"TADAL 20","presentacion":"20 mg comp.rec.x 8","droga":"tadalafilo","laboratorio":"Finadiet","mg":"20 mg","qty":8,"pvp_dic":61462.27,"pvp_feb":61462.27,"var_pct":0,"ppu_dic":7682.78,"ppu_feb":7682.78,"is_siegfried":false},{"producto":"VIMAX FLASH 50","presentacion":"50mg comp.dis.buc.rap.x6","droga":"sildenafil","laboratorio":"Roemmers","mg":"50 mg","qty":6,"pvp_dic":15768,"pvp_feb":16680,"var_pct":5.78,"ppu_dic":2628.0,"ppu_feb":2780.0,"is_siegfried":false},{"producto":"FORZAK","presentacion":"50 mg comp.mast.x 4","droga":"sildenafil","laboratorio":"Biosintex","mg":"50 mg","qty":4,"pvp_dic":8462,"pvp_feb":9107,"var_pct":7.62,"ppu_dic":2115.5,"ppu_feb":2276.75,"is_siegfried":false},{"producto":"FALIC","presentacion":"50 mg comp.mast.x 2","droga":"sildenafil","laboratorio":"Trb-Pharma","mg":"50 mg","qty":2,"pvp_dic":5900,"pvp_feb":6000,"var_pct":1.69,"ppu_dic":2950.0,"ppu_feb":3000.0,"is_siegfried":false},{"producto":"FALIC","presentacion":"50 mg comp.mast.x 20","droga":"sildenafil","laboratorio":"Trb-Pharma","mg":"50 mg","qty":20,"pvp_dic":38000,"pvp_feb":39900,"var_pct":5.0,"ppu_dic":1900.0,"ppu_feb":1995.0,"is_siegfried":false},{"producto":"LABSAMAX 50","presentacion":"50 mg comp.rec.x 2","droga":"sildenafil","laboratorio":"Labsa","mg":"50 mg","qty":2,"pvp_dic":5710.28,"pvp_feb":5710.28,"var_pct":0,"ppu_dic":2855.14,"ppu_feb":2855.14,"is_siegfried":false},{"producto":"LABSAMAX 50","presentacion":"50 mg comp.rec.x 10","droga":"sildenafil","laboratorio":"Labsa","mg":"50 mg","qty":10,"pvp_dic":21639.91,"pvp_feb":21639.91,"var_pct":0,"ppu_dic":2163.99,"ppu_feb":2163.99,"is_siegfried":false},{"producto":"CIALIS 5","presentacion":"5 mg comp.rec.x 14","droga":"tadalafilo","laboratorio":"Adium","mg":"5 mg","qty":14,"pvp_dic":107859.86,"pvp_feb":114095.45,"var_pct":5.78,"ppu_dic":7704.28,"ppu_feb":8149.68,"is_siegfried":false},{"producto":"SUPER-O","presentacion":"50 mg comp.mast.x 2","droga":"sildenafil","laboratorio":"Biotenk","mg":"50 mg","qty":2,"pvp_dic":5603.41,"pvp_feb":5754.7,"var_pct":2.7,"ppu_dic":2801.7,"ppu_feb":2877.35,"is_siegfried":false},{"producto":"LEVITRIN 50","presentacion":"comp.rec.x 2","droga":"sildenafil","laboratorio":"Rospaw","mg":"50 mg","qty":2,"pvp_dic":5889.78,"pvp_feb":5889.78,"var_pct":0,"ppu_dic":2944.89,"ppu_feb":2944.89,"is_siegfried":false},{"producto":"LEVITRIN 50","presentacion":"comp.rec.x 10","droga":"sildenafil","laboratorio":"Rospaw","mg":"50 mg","qty":10,"pvp_dic":19244.29,"pvp_feb":19244.29,"var_pct":0,"ppu_dic":1924.43,"ppu_feb":1924.43,"is_siegfried":false},{"producto":"LEVITRIN 100","presentacion":"comp.rec.x 2","droga":"sildenafil","laboratorio":"Rospaw","mg":"100 mg","qty":2,"pvp_dic":5622.72,"pvp_feb":5622.72,"var_pct":0,"ppu_dic":2811.36,"ppu_feb":2811.36,"is_siegfried":false}];
+// ── UTILS ────────────────────────────────────────────────────
+const fmt = (n, d=0) => '$ ' + n.toLocaleString('es-AR', {minimumFractionDigits:d, maximumFractionDigits:d});
+
+// ── TAB SWITCHING ────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab-section').forEach(s => s.style.display = 'none');
+  document.getElementById('tab-' + tab).style.display = '';
+  document.querySelectorAll('.nav-tab[data-tab]').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  if (tab === 'comparativa') renderCompTable();
+  if (tab === 'siegfried') renderSiegTable();
+}
+
+// ── COMPARATIVE TABLE ────────────────────────────────────────
+const CS = { drug: 'all', period: 'feb', metric: 'ppu', sortCol: 'ppu', sortDir: 1 };
+
+const COMP_COLS = [
+  { key: 'lab',  label: 'Laboratorio', align: 'left'  },
+  { key: 'prod', label: 'Producto',    align: 'left'  },
+  { key: 'pvp',  label: 'PVP',         align: 'right' },
+  { key: 'ppu',  label: 'PPU',         align: 'right' },
+  { key: 'vs',   label: 'vs MAGNUS',   align: 'right' },
+  { key: 'pos',  label: 'Posición',    align: 'center'},
+];
+
+function sortRows(rows, col, dir, ppu_k, pvp_k, val_k) {
+  return [...rows].sort((a, b) => {
+    // Siegfried always pinned first regardless of sort
+    if (a.is_siegfried && !b.is_siegfried) return -1;
+    if (!a.is_siegfried && b.is_siegfried) return 1;
+    let va, vb;
+    if (col === 'lab')  { va = a.laboratorio; vb = b.laboratorio; }
+    if (col === 'prod') { va = a.producto;    vb = b.producto;    }
+    if (col === 'pvp')  { va = a[pvp_k];      vb = b[pvp_k];      }
+    if (col === 'ppu')  { va = a[ppu_k];      vb = b[ppu_k];      }
+    if (col === 'vs')   { va = a._vsDiff ?? 0; vb = b._vsDiff ?? 0; }
+    if (col === 'pos')  { va = a._pos ?? 0;   vb = b._pos ?? 0;   }
+    if (typeof va === 'string') return dir * va.localeCompare(vb);
+    return dir * ((va ?? 0) - (vb ?? 0));
+  });
+}
+
+function thStyle(key, align) {
+  const active = CS.sortCol === key;
+  return `style="padding:8px 10px;font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:${active?'var(--red)':'var(--muted)'};text-align:${align};border-bottom:2px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap"`;
+}
+function thArrow(key) {
+  if (CS.sortCol !== key) return ' ↕';
+  return CS.sortDir === 1 ? ' ↑' : ' ↓';
+}
+
+function renderCompTable() {
+  const pvp_k = CS.period === 'feb' ? 'pvp_feb' : 'pvp_dic';
+  const ppu_k = CS.period === 'feb' ? 'ppu_feb' : 'ppu_dic';
+  const val_k = CS.metric === 'ppu' ? ppu_k : pvp_k;
+
+  let data = DATA.filter(r => CS.drug === 'all' || r.droga === CS.drug);
+
+  const groups = {};
+  data.forEach(r => {
+    const key = `${r.droga}|${r.mg}|${r.qty}`;
+    if (!groups[key]) groups[key] = { droga: r.droga, mg: r.mg, qty: r.qty, rows: [] };
+    groups[key].rows.push(r);
+  });
+
+  const sortedGroups = Object.values(groups)
+    .filter(g => g.rows.some(r => r.is_siegfried))
+    .sort((a, b) => {
+      if (a.droga !== b.droga) return a.droga.localeCompare(b.droga);
+      return parseInt(a.mg) - parseInt(b.mg) || a.qty - b.qty;
+    });
+
+  let html = '';
+  sortedGroups.forEach(g => {
+    const siegRow = g.rows.find(r => r.is_siegfried);
+    const siegVal = siegRow ? siegRow[val_k] : null;
+    const minVal = Math.min(...g.rows.map(r => r[val_k]));
+    const maxVal = Math.max(...g.rows.map(r => r[val_k]));
+
+    // Pre-compute sort keys
+    g.rows.forEach((r, i) => {
+      r._vsDiff = siegVal && !r.is_siegfried ? (r[val_k] - siegVal) / siegVal * 100 : null;
+      // pos = rank by val_k among non-sieg rows
+      const compRows = [...g.rows].filter(x => !x.is_siegfried).sort((a,b) => a[val_k]-b[val_k]);
+      r._pos = r.is_siegfried ? -1 : compRows.findIndex(x => x === r) + 1;
+    });
+
+    const sorted = sortRows(g.rows, CS.sortCol, CS.sortDir, ppu_k, pvp_k, val_k);
+
+    // Build th headers with onclick
+    const headers = COMP_COLS.map(c =>
+      `<th ${thStyle(c.key, c.align)} onclick="csSort('${c.key}')">${c.label}${thArrow(c.key)}</th>`
+    ).join('');
+
+    const rows = sorted.map((r, i) => {
+      const ppu = r[ppu_k], pvp = r[pvp_k];
+      const barW = maxVal > 0 ? Math.max(4, Math.round((r[val_k]/maxVal)*80)) : 4;
+      const isCheapest = r[val_k] === minVal;
+      const isMostExp  = r[val_k] === maxVal;
+
+      let vsCell;
+      if (r.is_siegfried) {
+        vsCell = '<span style="font-size:9px;background:var(--red-pale);color:var(--red);border:1px solid var(--red-border);border-radius:2px;padding:1px 6px;font-weight:600">REF</span>';
+      } else if (r._vsDiff !== null) {
+        const sign = r._vsDiff > 0 ? '+' : '';
+        const c = r._vsDiff > 5 ? 'var(--red)' : r._vsDiff < -5 ? 'var(--green)' : 'var(--orange)';
+        vsCell = `<span style="color:${c};font-weight:600">${sign}${r._vsDiff.toFixed(1)}%</span>`;
+      } else {
+        vsCell = '<span style="color:#ccc">—</span>';
+      }
+
+      const posIcon  = isCheapest ? '🟢' : isMostExp ? '🔴' : '⚪';
+      const rankNum  = sorted.filter(x => !x.is_siegfried).findIndex(x => x === r) + 1;
+      const compCount = sorted.filter(x => !x.is_siegfried).length;
+      const rankLabel = r.is_siegfried ? '<span style="color:var(--red);font-size:9px;font-weight:600">SIEG</span>' : `${posIcon} ${rankNum}° / ${compCount}`;
+
+      const rowBg  = r.is_siegfried ? '#fff6f5' : '#fff';
+      const rowBrd = r.is_siegfried ? '3px solid var(--red)' : '3px solid transparent';
+
+      return `<tr style="background:${rowBg};border-left:${rowBrd}">
+        <td style="padding:9px 10px;font-family:var(--sans);font-weight:600;font-size:13px;border-bottom:1px solid #f0f0f0">
+          ${r.is_siegfried ? '<span style="color:var(--red);margin-right:4px">★</span>' : ''}${r.laboratorio}
+        </td>
+        <td style="padding:9px 10px;font-family:var(--sans);font-size:12px;border-bottom:1px solid #f0f0f0">${r.producto}</td>
+        <td style="padding:9px 10px;font-family:var(--mono);font-size:12px;text-align:right;border-bottom:1px solid #f0f0f0">${fmt(pvp,0)}</td>
+        <td style="padding:9px 10px;font-family:var(--mono);font-size:12px;text-align:right;border-bottom:1px solid #f0f0f0">
+          <div style="display:flex;align-items:center;gap:6px;justify-content:flex-end">
+            <div style="width:${barW}px;height:3px;border-radius:1px;background:${r.is_siegfried?'var(--red)':'#e8c5c2'}"></div>
+            <span style="font-weight:${r.is_siegfried?'700':'500'}">${fmt(ppu,0)}</span>
+          </div>
+        </td>
+        <td style="padding:9px 10px;text-align:right;border-bottom:1px solid #f0f0f0">${vsCell}</td>
+        <td style="padding:9px 10px;font-family:var(--mono);font-size:10px;text-align:center;border-bottom:1px solid #f0f0f0;color:var(--muted)">${rankLabel}</td>
+      </tr>`;
+    }).join('');
+
+    html += `
+    <div style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="background:var(--dark);color:#fff;font-family:var(--mono);font-size:9px;font-weight:600;padding:3px 8px;border-radius:2px;letter-spacing:1px">${g.mg} · x${g.qty} comp.</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--muted)">${g.droga.toUpperCase()} · ${sorted.length} presentaciones</span>
+      </div>
+      <div class="card" style="padding:0">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr>${headers}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('compTableWrap').innerHTML = html || '<p style="color:var(--muted);font-family:var(--mono);padding:20px">Sin datos.</p>';
+}
+
+function csSort(col) {
+  if (CS.sortCol === col) CS.sortDir *= -1; else { CS.sortCol = col; CS.sortDir = 1; }
+  renderCompTable();
+}
+
+// ── SIEGFRIED TABLE ──────────────────────────────────────────
+const SS = { drug: 'all', period: 'feb', sortCol: 'droga', sortDir: 1 };
+
+const SIEG_COLS = [
+  { key: 'prod',    label: 'Producto',     align: 'left'   },
+  { key: 'pres',    label: 'Presentación', align: 'left'   },
+  { key: 'mg',      label: 'Dosis',        align: 'left'   },
+  { key: 'qty',     label: 'Comp.',        align: 'right'  },
+  { key: 'pvp',     label: 'PVP',          align: 'right'  },
+  { key: 'ppu',     label: 'PPU',          align: 'right'  },
+  { key: 'var',     label: 'Var %',        align: 'right'  },
+  { key: 'pos',     label: 'Pos. cat.',    align: 'center' },
+  { key: 'cheaper', label: 'Más baratos',  align: 'center' },
+  { key: 'moreexp', label: 'Más caros',    align: 'center' },
+];
+
+function sTh(key, align) {
+  const active = SS.sortCol === key;
+  return `style="padding:9px 10px;font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:${active?'var(--red)':'var(--muted)'};text-align:${align};cursor:pointer;user-select:none;white-space:nowrap"`;
+}
+function sArr(key) {
+  if (SS.sortCol !== key) return ' ↕';
+  return SS.sortDir === 1 ? ' ↑' : ' ↓';
+}
+
+function renderSiegTable() {
+  const pvp_k = SS.period === 'feb' ? 'pvp_feb' : 'pvp_dic';
+  const ppu_k = SS.period === 'feb' ? 'ppu_feb' : 'ppu_dic';
+
+  const sieg = DATA.filter(r => r.is_siegfried && (SS.drug === 'all' || r.droga === SS.drug));
+
+  let rows = sieg.map(r => {
+    const category = DATA.filter(d => d.droga === r.droga && d.mg === r.mg && d.qty === r.qty);
+    const sortedCat = [...category].sort((a,b) => a[ppu_k] - b[ppu_k]);
+    const pos     = sortedCat.findIndex(d => d.is_siegfried) + 1;
+    const cheaper = sortedCat.filter(d => !d.is_siegfried && d[ppu_k] < r[ppu_k]).length;
+    const moreExp = sortedCat.filter(d => !d.is_siegfried && d[ppu_k] > r[ppu_k]).length;
+    return { ...r, pos, total: category.length, cheaper, moreExp };
+  });
+
+  // Sort
+  rows.sort((a, b) => {
+    let va, vb;
+    const c = SS.sortCol;
+    if (c === 'prod')    { va = a.producto;    vb = b.producto;    }
+    if (c === 'pres')    { va = a.presentacion; vb = b.presentacion; }
+    if (c === 'mg')      { va = parseInt(a.mg); vb = parseInt(b.mg); }
+    if (c === 'qty')     { va = a.qty;          vb = b.qty;          }
+    if (c === 'pvp')     { va = a[pvp_k];       vb = b[pvp_k];       }
+    if (c === 'ppu')     { va = a[ppu_k];       vb = b[ppu_k];       }
+    if (c === 'var')     { va = a.var_pct;      vb = b.var_pct;      }
+    if (c === 'pos')     { va = a.pos;          vb = b.pos;          }
+    if (c === 'cheaper') { va = a.cheaper;      vb = b.cheaper;      }
+    if (c === 'moreexp') { va = a.moreExp;      vb = b.moreExp;      }
+    if (c === 'droga')   { va = a.droga + parseInt(a.mg) + a.qty; vb = b.droga + parseInt(b.mg) + b.qty; }
+    if (typeof va === 'string') return SS.sortDir * va.localeCompare(vb);
+    return SS.sortDir * ((va ?? 0) - (vb ?? 0));
+  });
+
+  const varCls = v => v === 0 ? 'color:var(--green);font-weight:600' : v >= 5 ? 'color:var(--red);font-weight:600' : 'color:var(--orange);font-weight:600';
+
+  const headers = `<tr style="border-bottom:2px solid var(--border)">` +
+    SIEG_COLS.map(c => `<th ${sTh(c.key, c.align)} onclick="ssSort('${c.key}')">${c.label}${sArr(c.key)}</th>`).join('') +
+    `</tr>`;
+
+  const tbody = rows.map(r => {
+    const pvp = r[pvp_k], ppu = r[ppu_k];
+    const varStr = r.var_pct > 0 ? `+${r.var_pct.toFixed(2)}%` : `${r.var_pct.toFixed(2)}%`;
+    const posBg    = r.pos === 1 ? '#edf7f2' : r.pos === r.total ? '#fdf0ef' : '#fffbe6';
+    const posColor = r.pos === 1 ? 'var(--green)' : r.pos === r.total ? 'var(--red)' : 'var(--orange)';
+    const posLabel = r.pos === 1 ? `🟢 1° / ${r.total}` : r.pos === r.total ? `🔴 ${r.pos}° / ${r.total}` : `🟡 ${r.pos}° / ${r.total}`;
+    return `<tr style="background:#fff6f5;border-left:3px solid var(--red)">
+      <td style="padding:9px 10px;font-family:var(--sans);font-weight:700;font-size:13px;color:var(--red);border-bottom:1px solid #f0f0f0">${r.producto}</td>
+      <td style="padding:9px 10px;font-family:var(--mono);font-size:10px;color:var(--muted);border-bottom:1px solid #f0f0f0">${r.presentacion}</td>
+      <td style="padding:9px 10px;border-bottom:1px solid #f0f0f0"><span class="dose-badge">${r.mg}</span></td>
+      <td style="padding:9px 10px;font-family:var(--mono);font-size:12px;text-align:right;color:var(--mid);border-bottom:1px solid #f0f0f0">${r.qty}</td>
+      <td style="padding:9px 10px;font-family:var(--mono);font-size:12px;text-align:right;font-weight:600;border-bottom:1px solid #f0f0f0">${fmt(pvp,0)}</td>
+      <td style="padding:9px 10px;font-family:var(--mono);font-size:12px;text-align:right;font-weight:700;color:var(--red);border-bottom:1px solid #f0f0f0">${fmt(ppu,0)}</td>
+      <td style="padding:9px 10px;font-family:var(--mono);font-size:12px;text-align:right;border-bottom:1px solid #f0f0f0;${varCls(r.var_pct)}">${varStr}</td>
+      <td style="padding:9px 10px;font-family:var(--mono);font-size:11px;text-align:center;border-bottom:1px solid #f0f0f0;background:${posBg};color:${posColor};font-weight:600">${posLabel}</td>
+      <td style="padding:9px 10px;font-family:var(--mono);font-size:12px;text-align:center;border-bottom:1px solid #f0f0f0;color:var(--green);font-weight:600">${r.cheaper}</td>
+      <td style="padding:9px 10px;font-family:var(--mono);font-size:12px;text-align:center;border-bottom:1px solid #f0f0f0;color:var(--red);font-weight:600">${r.moreExp}</td>
+    </tr>`;
+  }).join('');
+
+  document.querySelector('#tab-siegfried thead').innerHTML = headers;
+  document.getElementById('siegTbody').innerHTML = tbody;
+}
+
+function ssSort(col) {
+  if (SS.sortCol === col) SS.sortDir *= -1; else { SS.sortCol = col; SS.sortDir = 1; }
+  renderSiegTable();
+}
+
+// ── FILTERS ──────────────────────────────────────────────────
+document.getElementById('cDrug').addEventListener('change', e => { CS.drug = e.target.value; renderCompTable(); });
+document.querySelectorAll('[data-cp]').forEach(b => b.addEventListener('click', () => {
+  CS.period = b.dataset.cp;
+  document.querySelectorAll('[data-cp]').forEach(x => x.classList.toggle('active', x===b));
+  renderCompTable();
+}));
+document.querySelectorAll('[data-cm]').forEach(b => b.addEventListener('click', () => {
+  CS.metric = b.dataset.cm;
+  document.querySelectorAll('[data-cm]').forEach(x => x.classList.toggle('active', x===b));
+  renderCompTable();
+}));
+document.getElementById('sDrug').addEventListener('change', e => { SS.drug = e.target.value; renderSiegTable(); });
+document.querySelectorAll('[data-sp]').forEach(b => b.addEventListener('click', () => {
+  SS.period = b.dataset.sp;
+  document.querySelectorAll('[data-sp]').forEach(x => x.classList.toggle('active', x===b));
+  renderSiegTable();
+}));
+
+// ── INIT ─────────────────────────────────────────────────────
+renderCompTable();
+</script>
+</body>
+</html>
+
